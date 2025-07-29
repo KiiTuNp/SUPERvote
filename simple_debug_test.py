@@ -3,7 +3,7 @@ import json
 import sys
 
 class SimplePollStartTester:
-    def __init__(self, base_url="https://d8fff555-eb5a-4046-9fb4-1286bb4fcfad.preview.emergentagent.com"):
+    def __init__(self, base_url="https://33908b3d-6a6e-4ef3-bc46-8d32783a6199.preview.emergentagent.com"):
         self.base_url = base_url
         self.room_id = None
         self.poll_id = None
