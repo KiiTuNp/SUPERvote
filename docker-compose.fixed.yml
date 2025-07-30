@@ -1,0 +1,139 @@
+# SUPERvote Fixed Production Configuration
+# Working version with all issues resolved
+
+services:
+  # MongoDB with optimized configuration
+  mongodb:
+    image: mongo:8.0.12
+    container_name: supervote-mongo
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-supersecurepassword123}
+      - MONGO_INITDB_DATABASE=poll_app_prod
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+    ports:
+      - "27017:27017"
+    command: 
+      - mongod
+      - --bind_ip_all
+      - --wiredTigerCacheSizeGB
+      - "1"
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh admin --authenticationDatabase admin -u admin -p ${MONGO_ROOT_PASSWORD:-supersecurepassword123} --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis for caching
+  redis:
+    image: redis:7.4-alpine
+    container_name: supervote-redis
+    restart: unless-stopped
+    command: 
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    image: supervote-backend:latest
+    container_name: supervote-backend
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=production
+      - MONGO_URL=mongodb://admin:${MONGO_ROOT_PASSWORD:-supersecurepassword123}@mongodb:27017/poll_app_prod?authSource=admin&retryWrites=true&w=majority
+      - REDIS_URL=redis://redis:6379
+      - CORS_ORIGINS=https://vote.super-csn.ca,http://localhost:3000
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs/backend:/app/logs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+      args:
+        - REACT_APP_BACKEND_URL=https://vote.super-csn.ca
+        - REACT_APP_VERSION=2.0.0
+        - REACT_APP_ENVIRONMENT=production
+    image: supervote-frontend:latest
+    container_name: supervote-frontend
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:1.26-alpine
+    container_name: supervote-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.production.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend  
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# Volumes
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Networks
+networks:
+  app-network:
+    driver: bridge
