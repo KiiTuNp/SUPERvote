@@ -451,7 +451,7 @@ http {
     # HTTPS server (uncomment after SSL certificate is obtained)
     # server {
     #     listen 443 ssl http2;
-    #     server_name vote.super-csn.ca www.vote.super-csn.ca;
+    #     server_name vote.super-csn.ca;
     #     
     #     ssl_certificate /etc/nginx/ssl/fullchain.pem;
     #     ssl_certificate_key /etc/nginx/ssl/privkey.pem;
