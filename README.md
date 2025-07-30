@@ -58,12 +58,50 @@ A professional-grade, real-time polling application designed for secure meeting 
 - **Firewall** configured to allow ports 22, 80, 443
 - **Git** for deployment
 
-## 🚀 Quick Start (Local Development)
+## 🚀 Quick Start with Docker (Recommended)
 
 ### 1. Clone Repository
 ```bash
 git clone https://github.com/KiiTuNp/SUPERvote.git
 cd SUPERvote
+```
+
+### 2. Environment Setup
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit environment variables
+nano .env
+```
+
+### 3. Build and Run
+```bash
+# Build all services
+docker compose build
+
+# Start the application
+docker compose up -d
+
+# Check service status
+docker compose ps
+
+# View logs
+docker compose logs -f
+```
+
+### 4. Access Application
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8001
+- **API Documentation**: http://localhost:8001/api/docs
+
+### 5. Stopping Services
+```bash
+# Stop all services
+docker compose down
+
+# Stop and remove all data
+docker compose down -v
 ```
 
 ### 2. Backend Setup
