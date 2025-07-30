@@ -591,14 +591,14 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl wget git nginx mongodb python3 python3-pip python3-venv nodejs npm ufw
 ```
 
-#### Step 2: Install Node.js 18
+#### Step 2: Install Node.js 20
 ```bash
-# Install Node.js 18 (required for the frontend)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Install Node.js 20 (required for the frontend)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Verify installation
-node --version  # Should be v18.x
+node --version  # Should be v20.x
 npm --version
 ```
 
