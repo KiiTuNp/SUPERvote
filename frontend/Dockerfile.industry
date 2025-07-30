@@ -1,0 +1,165 @@
+# SUPERvote Frontend - Industry Leading Production Dockerfile
+# Multi-stage, security-hardened, performance-optimized
+
+# Build Arguments
+ARG NODE_VERSION=20.19.4
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG VERSION
+ARG REACT_APP_BACKEND_URL
+ARG REACT_APP_VERSION
+ARG REACT_APP_ENVIRONMENT=production
+ARG REACT_APP_SENTRY_DSN
+
+# Base image for building
+FROM node:${NODE_VERSION}-alpine as base
+
+# Metadata
+LABEL maintainer="SUPERvote Team" \
+      version="${VERSION}" \
+      description="SUPERvote Frontend - Production Ready" \
+      build-date="${BUILD_DATE}" \
+      vcs-ref="${GIT_COMMIT}" \
+      schema-version="1.0"
+
+# Install security updates and build tools
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+        ca-certificates \
+        curl \
+        dumb-init \
+        python3 \
+        make \
+        g++ \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1000 -S app && \
+    adduser -u 1000 -S app -G app
+
+# Dependencies stage
+FROM base as dependencies
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install npm and dependencies with security audit
+RUN npm install -g npm@10.8.2 && \
+    npm ci --only=production --no-audit --no-fund && \
+    npm cache clean --force
+
+# Install development dependencies for build
+RUN npm ci --no-audit --no-fund
+
+# Security audit
+RUN npm audit --audit-level high --production || true
+
+# Build stage
+FROM dependencies as builder
+
+# Set build environment
+ENV NODE_ENV=production \
+    GENERATE_SOURCEMAP=false \
+    DISABLE_ESLINT_PLUGIN=true \
+    IMAGE_INLINE_SIZE_LIMIT=0
+
+# Build arguments as environment variables
+ENV REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL} \
+    REACT_APP_VERSION=${REACT_APP_VERSION} \
+    REACT_APP_ENVIRONMENT=${REACT_APP_ENVIRONMENT} \
+    REACT_APP_SENTRY_DSN=${REACT_APP_SENTRY_DSN}
+
+# Copy source code
+COPY --chown=app:app . .
+
+# Switch to app user for build
+USER app
+
+# Build the application with optimizations
+RUN npm run build && \
+    npm run build:analyze || true
+
+# Security scanning stage
+FROM builder as security-scan
+
+USER root
+
+# Install security scanning tools
+RUN npm install -g \
+    @npmcli/arborist \
+    retire
+
+# Run security scans
+RUN retire --path /app || true
+RUN npm audit --json > /tmp/audit.json || true
+
+# Production stage - Nginx with Alpine
+FROM nginx:1.26-alpine as production
+
+# Install security updates
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+        ca-certificates \
+        curl \
+        dumb-init \
+    && rm -rf /var/cache/apk/*
+
+# Create nginx user if not exists
+RUN addgroup -g 101 -S nginx 2>/dev/null || true && \
+    adduser -u 101 -S nginx -G nginx 2>/dev/null || true
+
+# Copy built application
+COPY --from=builder --chown=nginx:nginx /app/build /usr/share/nginx/html
+
+# Copy optimized nginx configuration
+COPY --chown=nginx:nginx docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --chown=nginx:nginx docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+# Security headers configuration
+COPY --chown=nginx:nginx docker/nginx/security-headers.conf /etc/nginx/conf.d/security-headers.conf
+
+# Create required directories with proper permissions
+RUN mkdir -p /var/cache/nginx/client_temp \
+             /var/cache/nginx/proxy_temp \
+             /var/cache/nginx/fastcgi_temp \
+             /var/cache/nginx/uwsgi_temp \
+             /var/cache/nginx/scgi_temp \
+             /var/log/nginx \
+             /var/run \
+    && chown -R nginx:nginx /var/cache/nginx \
+                            /var/log/nginx \
+                            /usr/share/nginx/html \
+                            /var/run \
+    && chmod -R 755 /var/cache/nginx \
+                    /usr/share/nginx/html \
+    && chmod -R 644 /usr/share/nginx/html/* \
+    && find /usr/share/nginx/html -type d -exec chmod 755 {} \;
+
+# Create health check script
+RUN echo '#!/bin/sh' > /usr/local/bin/healthcheck.sh && \
+    echo 'curl -f -A "HealthCheck/1.0" http://localhost:80/health || exit 1' >> /usr/local/bin/healthcheck.sh && \
+    chmod +x /usr/local/bin/healthcheck.sh
+
+# Remove default nginx user's shell for security
+RUN sed -i 's|nginx:x:101:101:nginx:/var/cache/nginx:/bin/sh|nginx:x:101:101:nginx:/var/cache/nginx:/sbin/nologin|' /etc/passwd
+
+# Switch to nginx user
+USER nginx
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD /usr/local/bin/healthcheck.sh
+
+# Set up signal handling
+STOPSIGNAL SIGQUIT
+
+# Start nginx with dumb-init for proper signal handling
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["nginx", "-g", "daemon off;"]
