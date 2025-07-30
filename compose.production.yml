@@ -628,10 +628,10 @@ volumes:
     driver: tmpfs
     driver_opts:
       tmpfs-size: 200m
-  backup_tmp:
+  certbot_www:
     driver: tmpfs
     driver_opts:
-      tmpfs-size: 1g
+      tmpfs-size: 10m
 
 # Network Configuration
 networks:
