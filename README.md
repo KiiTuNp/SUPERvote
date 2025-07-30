@@ -542,7 +542,7 @@ docker-compose -f docker-compose.prod.yml stop nginx
 # Obtain SSL certificate for your domain
 sudo certbot certonly --standalone \
   -d vote.super-csn.ca \
-  --email your-email@example.com \
+  --email simon@super-csn.ca \
   --agree-tos \
   --no-eff-email
 
