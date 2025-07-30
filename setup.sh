@@ -408,6 +408,7 @@ main() {
     echo "=== SUPERvote Complete Setup Script ==="
     echo "This script will install and configure:"
     echo "- MongoDB 8.0.12"
+    echo "- Docker Engine with Docker Compose"
     echo "- Node.js 20.19.4 (via nvm)"
     echo "- Python 3.11"
     echo "- SUPERvote application"
