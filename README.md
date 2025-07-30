@@ -304,12 +304,13 @@ EOF
 ```bash
 cat > frontend/Dockerfile.prod << 'EOF'
 # Build stage
-FROM node:20-alpine as build
+FROM node:20.19.4-alpine as build
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+COPY yarn.lock ./
 RUN npm ci --only=production
 
 # Copy source code and build
