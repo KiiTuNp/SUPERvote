@@ -121,7 +121,7 @@ install_docker() {
         exit 1
     fi
 }
-install_nodejs() {
+# Install Node.js via nvm
     log_info "Installing Node.js 20.19.4 via nvm..."
     
     # Download and install nvm
