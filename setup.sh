@@ -427,6 +427,7 @@ main() {
     check_root
     update_system
     install_essential_packages
+    install_docker
     install_mongodb
     install_nodejs
     setup_python
