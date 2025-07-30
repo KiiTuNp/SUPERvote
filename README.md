@@ -320,8 +320,8 @@ FROM node:20.19.4-alpine as build
 
 WORKDIR /app
 
-# Update npm to latest
-RUN npm install -g npm@11.5.1
+# Update npm to correct version that comes with Node 20.19.4
+RUN npm install -g npm@10.8.2
 
 # Copy package files
 COPY package*.json ./
