@@ -156,7 +156,7 @@ setup_python() {
     
     # Verify Python installation
     python3 --version
-    pip3.11 --version
+    pip3 --version
     
     log_success "Python environment ready"
 }
@@ -381,7 +381,7 @@ verify_installation() {
     echo "=== System Information ==="
     echo "OS: $(lsb_release -d | cut -f2)"
     echo "Python: $(python3 --version)"
-    echo "pip: $(pip3.11 --version | cut -d' ' -f2)"
+    echo "pip: $(pip3 --version | cut -d' ' -f2)"
     
     # Source nvm for verification
     export NVM_DIR="$HOME/.nvm"
