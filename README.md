@@ -593,13 +593,13 @@ sudo apt install -y curl wget git nginx mongodb python3 python3-pip python3-venv
 
 #### Step 2: Install Node.js 20
 ```bash
-# Install Node.js 20 (required for the frontend)
+# Install Node.js 20.19.4 (required for the frontend)
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Verify installation
-node --version  # Should be v20.x
-npm --version
+node --version  # Should be v20.19.4
+npm --version   # Should be 11.5.1 or higher
 ```
 
 #### Step 3: Setup MongoDB
