@@ -402,6 +402,12 @@ verify_installation() {
         echo "MongoDB: ❌ Not running"
     fi
     
+    if sudo systemctl is-active --quiet docker; then
+        echo "Docker: ✅ Running"
+    else
+        echo "Docker: ❌ Not running"
+    fi
+    
     log_success "Installation verification completed"
 }
 
