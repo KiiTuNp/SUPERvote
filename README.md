@@ -26,11 +26,20 @@ A professional-grade, real-time polling application designed for secure meeting 
 
 ## 🏗️ Architecture
 
-**Frontend:** React with Tailwind CSS  
-**Backend:** FastAPI with WebSocket support  
-**Database:** MongoDB  
+**Frontend:** React 19.1.1 with Tailwind CSS 3.4.17  
+**Backend:** FastAPI 0.116.1 with WebSocket support  
+**Database:** MongoDB 8.0.12  
+**Runtime:** Node.js 20.19.4, Python 3.11.13  
 **Real-time:** WebSocket connections for live updates  
-**Export:** PDF generation with reportlab, JSON and text fallbacks
+**Export:** PDF generation with reportlab 4.4.3, JSON and text fallbacks
+
+### Updated Dependencies (Latest 2025)
+- **Node.js**: 20.19.4 with npm 11.5.1
+- **Python**: 3.11.13 with pip 25.1.1
+- **React**: 19.1.1 with latest React ecosystem
+- **FastAPI**: 0.116.1 (latest stable)
+- **MongoDB**: 8.0.12 (latest stable)
+- **All dependencies**: Updated to latest compatible versions
 
 ## 📋 Prerequisites
 
