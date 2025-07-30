@@ -126,8 +126,55 @@ setup_environment() {
     log_success "Environment prepared"
 }
 
-# Secrets management
-setup_secrets() {
+# Domain and SSL setup
+setup_domain_and_ssl() {
+    log_header "Domain and SSL Configuration"
+    
+    local domain="vote.super-csn.ca"
+    local email="simon@super-csn.ca"
+    
+    log_info "Configuring for domain: $domain"
+    
+    # Check if SSL certificates exist
+    if [ ! -f "./ssl/fullchain.pem" ] || [ ! -f "./ssl/privkey.pem" ]; then
+        log_info "SSL certificates not found, setting up SSL..."
+        
+        if [ -f "./docker/scripts/ssl-setup.sh" ]; then
+            log_info "Running SSL setup script..."
+            bash ./docker/scripts/ssl-setup.sh
+        else
+            log_warning "SSL setup script not found"
+            log_info "Creating temporary self-signed certificates for testing..."
+            
+            mkdir -p ssl
+            
+            # Create temporary self-signed certificate
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout ssl/privkey.pem \
+                -out ssl/fullchain.pem \
+                -subj "/C=CA/ST=QC/L=Montreal/O=SUPERvote/CN=$domain"
+            
+            cp ssl/fullchain.pem ssl/chain.pem
+            
+            log_warning "Temporary self-signed certificates created"
+            log_warning "For production, run: ./docker/scripts/ssl-setup.sh"
+        fi
+    else
+        log_success "SSL certificates found"
+    fi
+    
+    # Verify domain configuration in environment
+    if [ -f "$ENV_FILE" ]; then
+        if ! grep -q "DOMAIN=$domain" "$ENV_FILE"; then
+            echo "DOMAIN=$domain" >> "$ENV_FILE"
+        fi
+        if ! grep -q "EMAIL=$email" "$ENV_FILE"; then
+            echo "EMAIL=$email" >> "$ENV_FILE"
+        fi
+    fi
+    
+    log_success "Domain and SSL configuration completed"
+}
     log_header "Secrets Management"
     
     if [ -f "./docker/scripts/secrets-init.sh" ]; then
