@@ -572,7 +572,7 @@ chmod 755 ssl logs
 #### Step 6: Build and Deploy Application
 ```bash
 # Build and start all services
-docker-compose -f docker-compose.prod.yml up -d --build
+docker compose up -d --build
 
 # Check if all services are running
 docker-compose -f docker-compose.prod.yml ps
