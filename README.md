@@ -308,6 +308,9 @@ FROM node:20.19.4-alpine as build
 
 WORKDIR /app
 
+# Update npm to latest
+RUN npm install -g npm@11.5.1
+
 # Copy package files
 COPY package*.json ./
 COPY yarn.lock ./
