@@ -39,11 +39,7 @@ ENV NODE_ENV=production
 ENV GENERATE_SOURCEMAP=false
 
 # Build the application
-RUN if [ -f yarn.lock ]; then \
-        yarn build; \
-    else \
-        npm run build; \
-    fi
+RUN npm run build
 
 # Production stage with Nginx
 FROM nginx:1.26-alpine
