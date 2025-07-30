@@ -146,7 +146,7 @@ cp .env.example .env
 # Edit .env with your settings
 ```
 
-### 4. Database Setup
+### 3. Database Setup
 ```bash
 # Start MongoDB (Ubuntu/Debian)
 sudo systemctl start mongod
