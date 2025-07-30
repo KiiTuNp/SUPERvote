@@ -229,7 +229,7 @@ services:
     restart: unless-stopped
     environment:
       - MONGO_URL=mongodb://mongodb:27017/poll_app
-      - CORS_ORIGINS=https://vote.super-csn.ca,https://www.vote.super-csn.ca
+      - CORS_ORIGINS=https://vote.super-csn.ca
     depends_on:
       mongodb:
         condition: service_healthy
