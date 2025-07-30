@@ -835,7 +835,7 @@ sudo certbot renew --dry-run
 MONGO_URL=mongodb://localhost:27017/poll_app
 
 # CORS (for production)
-CORS_ORIGINS=https://vote.super-csn.ca,https://www.vote.super-csn.ca
+CORS_ORIGINS=https://vote.super-csn.ca
 
 # Optional: Custom port
 PORT=8001
