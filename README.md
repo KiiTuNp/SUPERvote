@@ -592,7 +592,7 @@ ssh root@your-vps-ip
 sudo apt update && sudo apt upgrade -y
 
 # Install required packages
-sudo apt install -y curl wget git nginx mongodb python3 python3-pip python3-venv nodejs npm ufw
+sudo apt install -y curl wget git nginx mongodb-org python3 python3-pip python3-venv nodejs npm ufw
 ```
 
 #### Step 2: Install Node.js 20
