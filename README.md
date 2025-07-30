@@ -52,9 +52,11 @@ A professional-grade, real-time polling application designed for secure meeting 
 
 ### For Ubuntu 22.04 VPS Production Deployment
 - **Ubuntu 22.04 LTS** VPS with root access (minimum 2GB RAM, 20GB storage)
+- **Docker Engine** with Docker Compose v2+
 - **Domain name** pointing to your VPS IP (vote.super-csn.ca in this example)
 - **SSH access** to your VPS
 - **Firewall** configured to allow ports 22, 80, 443
+- **Git** for deployment
 
 ## 🚀 Quick Start (Local Development)
 
