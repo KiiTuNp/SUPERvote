@@ -1166,7 +1166,7 @@ git pull origin main
 if [ -f "docker-compose.prod.yml" ]; then
     echo "Updating Docker deployment..."
     docker-compose -f docker-compose.prod.yml down
-    docker-compose -f docker-compose.prod.yml up -d --build
+    docker compose up -d --build
 else
     echo "Updating manual deployment..."
     cd backend
