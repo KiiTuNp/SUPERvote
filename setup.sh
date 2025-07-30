@@ -123,8 +123,7 @@ install_docker() {
 }
 # Install Node.js via nvm
 install_nodejs() {
-    
-    # Download and install nvm
+    log_info "Installing Node.js 20.19.4 via nvm..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
     
     # Source nvm
