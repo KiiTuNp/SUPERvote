@@ -93,7 +93,7 @@ sudo systemctl start mongod
 sudo systemctl enable mongod
 
 # Or using Docker
-docker run -d -p 27017:27017 --name mongodb mongo:latest
+docker run -d -p 27017:27017 --name mongodb mongo:8.0
 ```
 
 ### 5. Run Application
