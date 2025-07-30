@@ -304,7 +304,7 @@ EOF
 ```bash
 cat > frontend/Dockerfile.prod << 'EOF'
 # Build stage
-FROM node:18-alpine as build
+FROM node:20-alpine as build
 
 WORKDIR /app
 
