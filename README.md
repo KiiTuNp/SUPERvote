@@ -409,7 +409,7 @@ http {
     # HTTP server (redirects to HTTPS in production)
     server {
         listen 80;
-        server_name vote.super-csn.ca www.vote.super-csn.ca;
+        server_name vote.super-csn.ca;
         
         # Redirect to HTTPS (uncomment after SSL setup)
         # return 301 https://$server_name$request_uri;
