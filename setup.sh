@@ -463,7 +463,7 @@ main() {
     echo "- Stop: ./stop.sh" 
     echo "- Status: pm2 status"
     echo "- Logs: pm2 logs"
-    echo "- Docker: docker compose up -d (for container deployment))"
+    echo "- Docker: docker compose up -d (for container deployment)"
     echo ""
 }
 
