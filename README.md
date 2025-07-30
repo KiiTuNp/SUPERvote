@@ -126,7 +126,7 @@ cp .env.example .env
 # Edit .env with your settings
 ```
 
-### 3. Frontend Setup
+### 2. Frontend Setup
 ```bash
 # Navigate to frontend directory
 cd ../frontend
