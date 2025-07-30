@@ -162,8 +162,8 @@ services:
       # Security Configuration
       SECRET_KEY_FILE: /run/secrets/app_secret_key
       JWT_SECRET_FILE: /run/secrets/jwt_secret
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://vote.super-csn.ca}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-vote.super-csn.ca,localhost}
+      CORS_ORIGINS: https://vote.super-csn.ca
+      TRUSTED_HOSTS: vote.super-csn.ca
       
       # Performance Configuration
       WORKERS: ${BACKEND_WORKERS:-4}
