@@ -1,0 +1,650 @@
+# SUPERvote - Industry Leading Production Docker Deployment
+# Enterprise-grade, cloud-native, production-ready configuration
+
+# Global configurations
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "3"
+    compress: "true"
+
+x-restart-policy: &default-restart-policy
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+
+x-healthcheck-defaults: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+# Network and security configurations
+x-security-opts: &default-security-opts
+  security_opt:
+    - no-new-privileges:true
+  read_only: true
+  tmpfs:
+    - /tmp:noexec,nosuid,size=100m
+
+services:
+  # MongoDB - High Availability with Replica Set
+  mongodb-primary:
+    image: mongo:8.0.12
+    container_name: supervote-mongo-primary
+    hostname: mongo-primary
+    <<: *default-restart-policy
+    environment:
+      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/mongo_root_user
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_password
+      MONGO_INITDB_DATABASE: ${DB_NAME:-poll_app_prod}
+      MONGO_REPLICA_SET_NAME: rs0
+    secrets:
+      - mongo_root_user
+      - mongo_root_password
+    volumes:
+      - mongodb_primary_data:/data/db:Z
+      - mongodb_primary_config:/data/configdb:Z
+      - ./docker/mongodb/init-replica.js:/docker-entrypoint-initdb.d/init-replica.js:ro
+      - ./docker/mongodb/mongod.conf:/etc/mongod.conf:ro
+    networks:
+      app-tier:
+        aliases:
+          - mongo-primary
+    ports:
+      - "127.0.0.1:27017:27017"  # Bind to localhost only
+    command: 
+      - mongod
+      - --config
+      - /etc/mongod.conf
+      - --replSet
+      - rs0
+    healthcheck:
+      test: |
+        mongosh --eval "
+          try {
+            rs.status();
+            db.adminCommand('ping');
+          } catch(e) {
+            quit(1);
+          }
+        " --quiet
+      <<: *default-healthcheck
+      start_period: 60s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+          pids: 100
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    user: "999:999"
+
+  # Redis - High Performance Caching with Persistence
+  redis:
+    image: redis:7.4-alpine
+    container_name: supervote-redis
+    hostname: redis-cache
+    <<: *default-restart-policy
+    command:
+      - redis-server
+      - /etc/redis/redis.conf
+    volumes:
+      - redis_data:/data:Z
+      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
+      - /dev/null:/dev/stdout
+      - /dev/null:/dev/stderr
+    networks:
+      - app-tier
+    ports:
+      - "127.0.0.1:6379:6379"  # Bind to localhost only
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "ping"]
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 50
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    sysctls:
+      net.core.somaxconn: 1024
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    user: "999:999"
+
+  # Backend API - High Performance FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.industry
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - PYTHON_VERSION=3.11.13
+        - BUILD_DATE=${BUILD_DATE}
+        - GIT_COMMIT=${GIT_COMMIT}
+        - VERSION=${VERSION:-2.0.0}
+      target: production
+      cache_from:
+        - supervote-backend:cache
+        - supervote-backend:latest
+    image: supervote-backend:${VERSION:-latest}
+    container_name: supervote-backend
+    hostname: api-server
+    <<: *default-restart-policy
+    depends_on:
+      mongodb-primary:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Application Configuration
+      ENVIRONMENT: production
+      VERSION: ${VERSION:-2.0.0}
+      DEBUG: false
+      
+      # Database Configuration
+      MONGO_URL: mongodb://mongo-primary:27017/${DB_NAME:-poll_app_prod}?replicaSet=rs0&authSource=admin
+      REDIS_URL: redis://redis-cache:6379/0
+      
+      # Security Configuration
+      SECRET_KEY_FILE: /run/secrets/app_secret_key
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://vote.super-csn.ca}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-vote.super-csn.ca,localhost}
+      
+      # Performance Configuration
+      WORKERS: ${BACKEND_WORKERS:-4}
+      MAX_CONNECTIONS: ${MAX_CONNECTIONS:-1000}
+      KEEP_ALIVE: 65
+      
+      # Rate Limiting
+      RATE_LIMIT_ENABLED: true
+      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS:-1000}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-60}
+      
+      # Caching
+      CACHE_TTL: ${CACHE_TTL:-300}
+      CACHE_MAX_SIZE: ${CACHE_MAX_SIZE:-1000}
+      
+      # Monitoring
+      METRICS_ENABLED: true
+      TRACING_ENABLED: true
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Health Check
+      HEALTH_CHECK_TIMEOUT: 30
+    secrets:
+      - app_secret_key
+      - jwt_secret
+      - mongo_root_user
+      - mongo_root_password
+    volumes:
+      - ./logs/backend:/app/logs:Z
+      - backend_tmp:/tmp:noexec,nosuid,size=100m
+    networks:
+      - app-tier
+    ports:
+      - "127.0.0.1:8001:8001"  # Bind to localhost only
+    healthcheck:
+      test: |
+        curl -f -H "User-Agent: HealthCheck/1.0" \
+             -H "X-Health-Check: true" \
+             http://localhost:8001/api/health || exit 1
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+          pids: 200
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    <<: *default-security-opts
+    user: "1000:1000"
+
+  # Frontend - Optimized React Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.industry
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - NODE_VERSION=20.19.4
+        - BUILD_DATE=${BUILD_DATE}
+        - GIT_COMMIT=${GIT_COMMIT}
+        - VERSION=${VERSION:-2.0.0}
+        - REACT_APP_BACKEND_URL=${FRONTEND_BACKEND_URL:-https://vote.super-csn.ca}
+        - REACT_APP_VERSION=${VERSION:-2.0.0}
+        - REACT_APP_ENVIRONMENT=production
+        - REACT_APP_SENTRY_DSN=${FRONTEND_SENTRY_DSN:-}
+      target: production
+      cache_from:
+        - supervote-frontend:cache
+        - supervote-frontend:latest
+    image: supervote-frontend:${VERSION:-latest}
+    container_name: supervote-frontend
+    hostname: web-server
+    <<: *default-restart-policy
+    volumes:
+      - ./logs/frontend:/var/log/nginx:Z
+      - frontend_cache:/var/cache/nginx:Z
+      - frontend_tmp:/tmp:noexec,nosuid,size=50m
+    networks:
+      - app-tier
+    healthcheck:
+      test: |
+        curl -f -H "User-Agent: HealthCheck/1.0" \
+             http://localhost:80/health || exit 1
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 100
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    <<: *default-security-opts
+    user: "101:101"  # nginx user
+
+  # Nginx - High Performance Reverse Proxy & Load Balancer
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile.industry
+      args:
+        - NGINX_VERSION=1.26-alpine
+        - BUILD_DATE=${BUILD_DATE}
+    image: supervote-nginx:${VERSION:-latest}
+    container_name: supervote-nginx
+    hostname: load-balancer
+    <<: *default-restart-policy
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:8080:8080"  # Admin/metrics port
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx:Z
+      - nginx_cache:/var/cache/nginx:Z
+      - nginx_tmp:/tmp:noexec,nosuid,size=100m
+    networks:
+      - app-tier
+      - external
+    environment:
+      NGINX_WORKER_PROCESSES: auto
+      NGINX_WORKER_CONNECTIONS: 4096
+      NGINX_KEEPALIVE_TIMEOUT: 65
+      NGINX_CLIENT_MAX_BODY_SIZE: 10m
+    healthcheck:
+      test: |
+        curl -f -H "Host: health.local" \
+             http://localhost:8080/nginx-health || exit 1
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+          pids: 100
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    <<: *default-security-opts
+    user: "101:101"  # nginx user
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: supervote-prometheus
+    hostname: metrics-collector
+    <<: *default-restart-policy
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=http://localhost:9090'
+      - '--web.route-prefix=/'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus:Z
+    networks:
+      - app-tier
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: |
+        wget --no-verbose --tries=1 --spider \
+             http://localhost:9090/-/healthy || exit 1
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+          pids: 100
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    user: "65534:65534"  # nobody user
+
+  # Grafana - Monitoring Dashboard
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: supervote-grafana
+    hostname: dashboard
+    <<: *default-restart-policy
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      # Security
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_SECURITY_SECRET_KEY__FILE: /run/secrets/grafana_secret_key
+      GF_SECURITY_DISABLE_GRAVATAR: true
+      
+      # Users
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Viewer
+      
+      # Server
+      GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN:-localhost}
+      GF_SERVER_ROOT_URL: https://${GRAFANA_DOMAIN:-localhost}:3000
+      
+      # Database
+      GF_DATABASE_TYPE: sqlite3
+      GF_DATABASE_PATH: /var/lib/grafana/grafana.db
+      
+      # Plugins
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel
+      
+      # Performance
+      GF_ALERTING_ENABLED: true
+      GF_METRICS_ENABLED: true
+    secrets:
+      - grafana_admin_password
+      - grafana_secret_key
+    volumes:
+      - grafana_data:/var/lib/grafana:Z
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - app-tier
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: |
+        curl -f http://localhost:3000/api/health || exit 1
+      <<: *default-healthcheck
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 100
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    user: "472:472"  # grafana user
+
+  # Node Exporter - System Metrics
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: supervote-node-exporter
+    hostname: system-metrics
+    <<: *default-restart-policy
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--web.listen-address=:9100'
+      - '--web.telemetry-path=/metrics'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - app-tier
+    ports:
+      - "127.0.0.1:9100:9100"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+          pids: 50
+    cap_drop:
+      - ALL
+    user: "65534:65534"  # nobody user
+
+  # Backup Service - Automated Data Protection
+  backup:
+    build:
+      context: ./docker/backup
+      dockerfile: Dockerfile
+    image: supervote-backup:${VERSION:-latest}
+    container_name: supervote-backup
+    hostname: backup-service
+    <<: *default-restart-policy
+    depends_on:
+      mongodb-primary:
+        condition: service_healthy
+    environment:
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_COMPRESSION: ${BACKUP_COMPRESSION:-gzip}
+      BACKUP_ENCRYPTION: ${BACKUP_ENCRYPTION:-true}
+      S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      S3_REGION: ${BACKUP_S3_REGION:-}
+    secrets:
+      - mongo_root_user
+      - mongo_root_password
+      - backup_encryption_key
+      - s3_access_key
+      - s3_secret_key
+    volumes:
+      - ./backups:/backups:Z
+      - backup_tmp:/tmp:noexec,nosuid,size=1G
+    networks:
+      - app-tier
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 50
+    user: "1000:1000"
+
+  # Log Aggregation - Centralized Logging
+  fluent-bit:
+    image: fluent/fluent-bit:3.2.2
+    container_name: supervote-fluent-bit
+    hostname: log-aggregator
+    <<: *default-restart-policy
+    volumes:
+      - ./docker/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logs:/var/log/supervote:ro
+    networks:
+      - app-tier
+    depends_on:
+      - backend
+      - frontend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+          pids: 50
+    user: "1000:1000"
+
+# Secrets Management
+secrets:
+  mongo_root_user:
+    external: true
+    name: supervote_mongo_root_user_v1
+  mongo_root_password:
+    external: true  
+    name: supervote_mongo_root_password_v1
+  app_secret_key:
+    external: true
+    name: supervote_app_secret_key_v1
+  jwt_secret:
+    external: true
+    name: supervote_jwt_secret_v1
+  grafana_admin_password:
+    external: true
+    name: supervote_grafana_admin_password_v1
+  grafana_secret_key:
+    external: true
+    name: supervote_grafana_secret_key_v1
+  backup_encryption_key:
+    external: true
+    name: supervote_backup_encryption_key_v1
+  s3_access_key:
+    external: true
+    name: supervote_s3_access_key_v1
+  s3_secret_key:
+    external: true
+    name: supervote_s3_secret_key_v1
+
+# Persistent Volumes with Performance Optimization
+volumes:
+  mongodb_primary_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/mongodb_primary
+  mongodb_primary_config:
+    driver: local
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/redis
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/prometheus
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/grafana
+  backend_tmp:
+    driver: tmpfs
+    driver_opts:
+      tmpfs-size: 100m
+  frontend_tmp:
+    driver: tmpfs
+    driver_opts:
+      tmpfs-size: 50m
+  frontend_cache:
+    driver: tmpfs
+    driver_opts:
+      tmpfs-size: 100m
+  nginx_tmp:
+    driver: tmpfs
+    driver_opts:
+      tmpfs-size: 100m
+  nginx_cache:
+    driver: tmpfs
+    driver_opts:
+      tmpfs-size: 200m
+  backup_tmp:
+    driver: tmpfs
+    driver_opts:
+      tmpfs-size: 1g
+
+# Network Configuration
+networks:
+  app-tier:
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          ip_range: 172.20.240.0/20
+    driver_opts:
+      com.docker.network.bridge.name: supervote-internal
+      com.docker.network.driver.mtu: 1500
+  external:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.21.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: supervote-external
+      com.docker.network.driver.mtu: 1500
