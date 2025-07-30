@@ -266,8 +266,6 @@ ls -la
 **Create Docker Compose file (`compose.yml`):**
 ```bash
 cat > compose.yml << 'EOF'
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:8.0.12
