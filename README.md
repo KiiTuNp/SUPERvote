@@ -681,7 +681,7 @@ pip install -r requirements.txt
 # Create production environment file
 cat > .env << EOF
 MONGO_URL=mongodb://localhost:27017/poll_app
-CORS_ORIGINS=https://vote.super-csn.ca,https://www.vote.super-csn.ca
+CORS_ORIGINS=https://vote.super-csn.ca
 EOF
 ```
 
