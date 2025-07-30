@@ -114,11 +114,11 @@ Application will be available at:
 - **Frontend:** http://localhost:3000
 - **Backend API:** http://localhost:8001
 
-## 🌐 Production Deployment on Ubuntu 20.04 VPS
+## 🌐 Production Deployment on Ubuntu 22.04 VPS
 
 ### Prerequisites Check
 Before starting, ensure you have:
-- Ubuntu 20.04 LTS VPS with root access
+- Ubuntu 22.04 LTS VPS with root access
 - Domain `vote.super-csn.ca` pointing to your VPS IP address
 - SSH access to your server
 
