@@ -1,0 +1,152 @@
+# SUPERvote Backend - Industry Leading Production Dockerfile
+# Multi-stage, security-hardened, performance-optimized
+
+# Build Arguments
+ARG PYTHON_VERSION=3.11.13
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ARG VERSION
+
+# Base image with security updates
+FROM python:${PYTHON_VERSION}-slim as base
+
+# Metadata
+LABEL maintainer="SUPERvote Team" \
+      version="${VERSION}" \
+      description="SUPERvote Backend API - Production Ready" \
+      build-date="${BUILD_DATE}" \
+      vcs-ref="${GIT_COMMIT}" \
+      schema-version="1.0"
+
+# Security: Create non-root user first
+RUN groupadd -r -g 1000 app && \
+    useradd -r -g app -u 1000 -m -s /bin/bash app
+
+# Install security updates and essential packages
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
+
+# Build stage
+FROM base as builder
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        g++ \
+        pkg-config \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set up Python environment
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=60
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip and install wheel
+RUN pip install --no-cache-dir --upgrade \
+    pip==25.1.1 \
+    wheel==0.45.1 \
+    setuptools==75.6.0
+
+# Copy requirements
+WORKDIR /app
+COPY requirements_production.txt requirements.txt
+
+# Install Python dependencies with optimizations
+RUN pip install --no-cache-dir \
+    --no-deps \
+    --require-hashes \
+    --only-binary=all \
+    -r requirements.txt
+
+# Security scanning stage
+FROM builder as security-scan
+
+# Install security tools
+RUN pip install --no-cache-dir \
+    safety==3.2.11 \
+    bandit==1.8.0
+
+# Run security scans
+COPY . .
+RUN safety check --json || true
+RUN bandit -r . -f json || true
+
+# Production stage
+FROM base as production
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Set environment variables
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONHASHSEED=random \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app" \
+    PORT=8001
+
+# Create application directory
+WORKDIR /app
+
+# Copy application code with proper ownership
+COPY --chown=app:app . .
+
+# Create required directories
+RUN mkdir -p /app/logs /app/tmp && \
+    chown -R app:app /app && \
+    chmod -R 755 /app && \
+    chmod +x /app/server_production.py
+
+# Create read-only filesystem structure
+RUN mkdir -p /tmp && \
+    chown app:app /tmp && \
+    chmod 1777 /tmp
+
+# Health check script
+COPY --chown=app:app docker/healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
+
+# Switch to non-root user
+USER app
+
+# Expose port
+EXPOSE 8001
+
+# Health check with enhanced monitoring
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
+    CMD /usr/local/bin/healthcheck.sh
+
+# Set up signal handling
+STOPSIGNAL SIGTERM
+
+# Start application with proper signal handling
+CMD ["python", "-m", "uvicorn", "server_production:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8001", \
+     "--workers", "1", \
+     "--loop", "uvloop", \
+     "--http", "httptools", \
+     "--access-log", \
+     "--log-config", "logging.conf", \
+     "--timeout-keep-alive", "65", \
+     "--timeout-graceful-shutdown", "30"]
