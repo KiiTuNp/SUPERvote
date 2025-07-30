@@ -933,7 +933,7 @@ No authentication required - uses anonymous session tokens
 
 ## 🔍 Troubleshooting
 
-### Common Ubuntu 20.04 Issues
+### Common Ubuntu 22.04 Issues
 
 #### Domain Not Resolving
 ```bash
