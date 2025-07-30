@@ -577,7 +577,7 @@ sudo systemctl enable supervote.service
 sudo systemctl start supervote.service
 ```
 
-### Option 2: Manual Ubuntu 20.04 VPS Deployment
+### Option 2: Manual Ubuntu 22.04 VPS Deployment
 
 #### Step 1: System Preparation
 ```bash
