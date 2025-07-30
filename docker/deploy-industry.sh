@@ -177,14 +177,13 @@ setup_domain_and_ssl() {
 }
 # Secrets management
 setup_secrets() {
-    
     log_header "Secrets Management"
+    if [ -f "./docker/scripts/secrets-init.sh" ]; then
         log_info "Running secrets initialization..."
         bash ./docker/scripts/secrets-init.sh
     else
         log_warning "Secrets initialization script not found"
         log_info "Creating basic environment file..."
-        
         cat > "$ENV_FILE" << EOF
 # Basic production configuration
 VERSION=2.0.0
@@ -195,7 +194,7 @@ BUILD_DATE=$BUILD_DATE
 GIT_COMMIT=$GIT_COMMIT
 EOF
     fi
-    
+
     log_success "Secrets configured"
 }
 
