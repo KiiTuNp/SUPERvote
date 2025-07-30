@@ -189,7 +189,7 @@ version: '3.8'
 
 services:
   mongodb:
-    image: mongo:7.0
+    image: mongo:8.0.12
     container_name: supervote-mongo
     restart: unless-stopped
     environment:
