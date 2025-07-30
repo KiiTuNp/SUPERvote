@@ -238,7 +238,7 @@ sudo usermod -aG docker $USER
 sudo systemctl enable docker
 sudo systemctl start docker
 
-# Verify installation (may require re-login for group membership)
+# Verify installation (requires re-login for group membership)
 sudo docker --version
 sudo docker compose version
 
