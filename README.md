@@ -88,7 +88,12 @@ cp .env.example .env
 # Navigate to frontend directory
 cd ../frontend
 
-# Install dependencies
+# If you haven't installed Node.js yet, use nvm:
+# curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+# \. "$HOME/.nvm/nvm.sh"
+# nvm install 20
+
+# Install dependencies  
 npm install
 # or
 yarn install
