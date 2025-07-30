@@ -47,7 +47,7 @@ update_system() {
 # Install essential packages
 install_essential_packages() {
     log_info "Installing essential packages..."
-    sudo apt install -y curl wget git nginx ufw python3.11 python3.11-pip python3.11-venv software-properties-common ca-certificates gnupg lsb-release
+    sudo apt install -y curl wget git nginx ufw python3 python3-pip python3-venv software-properties-common ca-certificates gnupg lsb-release
     log_success "Essential packages installed"
 }
 
@@ -152,10 +152,10 @@ setup_python() {
     log_info "Setting up Python environment..."
     
     # Upgrade pip
-    python3.11 -m pip install --upgrade pip
+    python3 -m pip install --upgrade pip
     
     # Verify Python installation
-    python3.11 --version
+    python3 --version
     pip3.11 --version
     
     log_success "Python environment ready"
@@ -195,7 +195,7 @@ setup_backend() {
     cd backend
     
     # Create virtual environment
-    python3.11 -m venv venv
+    python3 -m venv venv
     source venv/bin/activate
     
     # Upgrade pip in virtual environment
@@ -380,7 +380,7 @@ verify_installation() {
     echo ""
     echo "=== System Information ==="
     echo "OS: $(lsb_release -d | cut -f2)"
-    echo "Python: $(python3.11 --version)"
+    echo "Python: $(python3 --version)"
     echo "pip: $(pip3.11 --version | cut -d' ' -f2)"
     
     # Source nvm for verification
