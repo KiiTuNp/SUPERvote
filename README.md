@@ -210,7 +210,7 @@ su - deployer
 #### Step 2: Install Docker and Docker Compose
 ```bash
 # Remove any existing Docker packages
-for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do 
+for pkg in docker.io docker-doc podman-docker containerd runc; do 
     sudo apt-get remove -y $pkg 2>/dev/null || true
 done
 
