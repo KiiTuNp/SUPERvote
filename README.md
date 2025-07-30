@@ -263,9 +263,9 @@ ls -la
 
 #### Step 4: Create Production Configuration Files
 
-**Create Docker Compose file (`docker-compose.prod.yml`):**
+**Create Docker Compose file (`compose.yml`):**
 ```bash
-cat > docker-compose.prod.yml << 'EOF'
+cat > compose.yml << 'EOF'
 version: '3.8'
 
 services:
