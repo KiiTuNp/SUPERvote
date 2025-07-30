@@ -267,7 +267,7 @@ EOF
 **Create Backend Dockerfile (`backend/Dockerfile.prod`):**
 ```bash
 cat > backend/Dockerfile.prod << 'EOF'
-FROM python:3.11-slim
+FROM python:3.11.13-slim
 
 WORKDIR /app
 
@@ -276,6 +276,9 @@ RUN apt-get update && apt-get install -y \
     gcc \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip to latest version
+RUN pip install --upgrade pip
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
