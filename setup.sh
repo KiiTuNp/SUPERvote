@@ -167,7 +167,7 @@ setup_backend() {
     if [ ! -f .env ]; then
         cat > .env << EOF
 MONGO_URL=mongodb://localhost:27017/poll_app
-CORS_ORIGINS=https://vote.super-csn.ca,https://www.vote.super-csn.ca,http://localhost:3000
+CORS_ORIGINS=https://vote.super-csn.ca,http://localhost:3000
 EOF
         log_success "Backend .env file created"
     fi
