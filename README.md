@@ -1085,9 +1085,10 @@ else
     echo "Updating manual deployment..."
     cd backend
     source venv/bin/activate
+    pip install --upgrade pip
     pip install -r requirements.txt
     cd ../frontend
-    npm install
+    npm install --force
     npm run build
     pm2 restart supervote-backend
     sudo systemctl reload nginx
