@@ -68,9 +68,12 @@ cd SUPERvote
 # Navigate to backend directory
 cd backend
 
-# Create virtual environment
-python3 -m venv venv
+# Create virtual environment with Python 3.11
+python3.11 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Upgrade pip to latest version  
+pip install --upgrade pip
 
 # Install dependencies
 pip install -r requirements.txt
