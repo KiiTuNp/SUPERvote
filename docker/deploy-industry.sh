@@ -178,7 +178,7 @@ setup_domain_and_ssl() {
 # Secrets management
 setup_secrets() {
     
-    if [ -f "./docker/scripts/secrets-init.sh" ]; then
+    log_header "Secrets Management"
         log_info "Running secrets initialization..."
         bash ./docker/scripts/secrets-init.sh
     else
