@@ -641,9 +641,12 @@ git clone https://github.com/KiiTuNp/SUPERvote.git .
 ```bash
 cd /opt/supervote/backend
 
-# Create virtual environment
-python3 -m venv venv
+# Create virtual environment with Python 3.11
+python3.11 -m venv venv
 source venv/bin/activate
+
+# Upgrade pip to latest version
+pip install --upgrade pip
 
 # Install Python dependencies
 pip install -r requirements.txt
