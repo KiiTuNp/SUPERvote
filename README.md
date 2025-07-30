@@ -738,7 +738,7 @@ EOF
 sudo tee /etc/nginx/sites-available/supervote << 'EOF'
 server {
     listen 80;
-    server_name vote.super-csn.ca www.vote.super-csn.ca;
+    server_name vote.super-csn.ca;
     
     # Security headers
     add_header X-Frame-Options DENY;
