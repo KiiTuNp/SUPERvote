@@ -614,15 +614,23 @@ npm --version        # Should be 11.5.1+
 mongod --version     # Should be MongoDB 8.0.12+
 ```
 
-#### Step 2: Install Node.js 20
+#### Step 2: Install Node.js 20 via nvm
 ```bash
-# Install Node.js 20.19.4 (required for the frontend)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+# Download and install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 
-# Verify installation
-node --version  # Should be v20.19.4
-npm --version   # Should be 11.5.1 or higher
+# Source nvm instead of restarting the shell
+\. "$HOME/.nvm/nvm.sh"
+
+# Download and install Node.js 20
+nvm install 20
+
+# Verify Node.js version
+node -v      # Should display "v20.19.4"
+nvm current  # Should display "v20.19.4"
+
+# Verify npm version
+npm -v       # Should display "10.8.2"
 ```
 
 #### Step 3: Setup MongoDB 8.0
