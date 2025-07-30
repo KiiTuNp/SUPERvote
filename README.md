@@ -47,6 +47,7 @@ A professional-grade, real-time polling application designed for secure meeting 
 - **Node.js** 20.19.4+ and npm 10.8.2+/yarn (install via nvm)
 - **Python** 3.11+ and pip 22.0.2+
 - **MongoDB** 8.0.12+
+- **Docker** with Docker Compose v2+ (recommended)
 - **Git**
 
 ### For Ubuntu 22.04 VPS Production Deployment
