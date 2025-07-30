@@ -609,8 +609,8 @@ sudo apt install -y curl wget git nginx mongodb-org python3.11 python3.11-pip py
 # Verify versions
 python3 --version    # Should be Python 3.11+
 pip3 --version       # Should be pip 22.0.2+
-node --version       # Should be v20.19.4+
-npm --version        # Should be 11.5.1+
+node -v              # Should be v20.19.4+
+npm -v               # Should be 10.8.2+
 mongod --version     # Should be MongoDB 8.0.12+
 ```
 
