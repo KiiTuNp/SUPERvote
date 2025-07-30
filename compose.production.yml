@@ -310,12 +310,13 @@ services:
       - "443:443"
       - "127.0.0.1:8080:8080"  # Admin/metrics port
     volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/nginx.production.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx:Z
       - nginx_cache:/var/cache/nginx:Z
       - nginx_tmp:/tmp:noexec,nosuid,size=100m
+      - certbot_www:/var/www/certbot:ro
     networks:
       - app-tier
       - external
