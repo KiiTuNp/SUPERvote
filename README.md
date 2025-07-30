@@ -34,9 +34,9 @@ A professional-grade, real-time polling application designed for secure meeting 
 **Export:** PDF generation with reportlab 4.4.3, JSON and text fallbacks
 
 ### Updated Dependencies (Latest 2025)
-- **Node.js**: 20.19.4 with npm 11.5.1
+- **Node.js**: 20.19.4 with npm 10.8.2 (installed via nvm)
 - **Python**: 3.11.13 with pip 25.1.1
-- **React**: 19.1.1 with latest React ecosystem
+- **React**: 19.1.1 with latest React ecosystem  
 - **FastAPI**: 0.116.1 (latest stable)
 - **MongoDB**: 8.0.12 (latest stable)
 - **All dependencies**: Updated to latest compatible versions
