@@ -818,8 +818,8 @@ sudo ufw --force enable
 # Install Certbot
 sudo apt install -y certbot python3-certbot-nginx
 
-# Obtain SSL certificate
-sudo certbot --nginx -d vote.super-csn.ca -d www.vote.super-csn.ca --email your-email@example.com --agree-tos --no-eff-email
+# Obtain SSL certificate for your domain
+sudo certbot --nginx -d vote.super-csn.ca --email your-email@example.com --agree-tos --no-eff-email
 
 # Test auto-renewal
 sudo certbot renew --dry-run
