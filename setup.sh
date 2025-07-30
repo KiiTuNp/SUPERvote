@@ -456,12 +456,14 @@ main() {
     echo "1. Run './start.sh' to start the application"
     echo "2. Open http://localhost:3000 in your browser"
     echo "3. For production deployment, check the README.md file"
+    echo "4. For Docker deployment, use 'docker compose' commands"
     echo ""
     echo "Useful commands:"
     echo "- Start: ./start.sh"
-    echo "- Stop: ./stop.sh"
+    echo "- Stop: ./stop.sh" 
     echo "- Status: pm2 status"
     echo "- Logs: pm2 logs"
+    echo "- Docker: docker compose up -d (for container deployment))"
     echo ""
 }
 
