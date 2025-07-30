@@ -104,7 +104,9 @@ docker compose down
 docker compose down -v
 ```
 
-### 2. Backend Setup
+## 🛠️ Manual Development Setup (Alternative)
+
+### 1. Backend Setup
 ```bash
 # Navigate to backend directory
 cd backend
