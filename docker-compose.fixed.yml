@@ -89,14 +89,16 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.production
+      dockerfile: Dockerfile.fixed
       args:
-        - REACT_APP_BACKEND_URL=https://vote.super-csn.ca
+        - REACT_APP_BACKEND_URL=http://localhost:8001
         - REACT_APP_VERSION=2.0.0
         - REACT_APP_ENVIRONMENT=production
     image: supervote-frontend:latest
     container_name: supervote-frontend
     restart: unless-stopped
+    ports:
+      - "3000:80"
     networks:
       - app-network
     healthcheck:
