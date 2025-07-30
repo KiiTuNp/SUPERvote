@@ -156,7 +156,7 @@ sudo systemctl enable mongod
 docker run -d -p 27017:27017 --name mongodb mongo:8.0
 ```
 
-### 5. Run Application
+### 4. Running the Application
 ```bash
 # Terminal 1: Backend
 cd backend
