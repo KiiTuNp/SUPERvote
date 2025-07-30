@@ -1,0 +1,404 @@
+version: '3.8'
+
+# SUPERvote Production - State-of-the-art Configuration
+# High Performance, Fault Tolerant, Auto-scaling Ready
+
+services:
+  # MongoDB with replica set for high availability
+  mongodb-primary:
+    image: mongo:8.0.12
+    container_name: supervote-mongo-primary
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-supersecurepassword}
+      - MONGO_INITDB_DATABASE=poll_app_prod
+      - MONGO_REPLICA_SET_NAME=rs0
+    volumes:
+      - mongodb_primary_data:/data/db
+      - mongodb_primary_config:/data/configdb
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - app-network
+    ports:
+      - "27017:27017"
+    command: 
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+      - --wiredTigerCacheSizeGB
+      - "2"
+      - --logpath
+      - /var/log/mongodb/mongod.log
+      - --logappend
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh admin --authenticationDatabase admin -u admin -p ${MONGO_ROOT_PASSWORD:-supersecurepassword} --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7.4-alpine
+    container_name: supervote-redis
+    restart: unless-stopped
+    command: 
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --tcp-keepalive
+      - "60"
+      - --timeout
+      - "300"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Backend API with production optimizations
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+      cache_from:
+        - supervote-backend:latest
+    image: supervote-backend:latest
+    container_name: supervote-backend
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=production
+      - MONGO_URL=mongodb://admin:${MONGO_ROOT_PASSWORD:-supersecurepassword}@mongodb-primary:27017/poll_app_prod?authSource=admin&retryWrites=true&w=majority
+      - REDIS_URL=redis://redis:6379
+      - CORS_ORIGINS=https://vote.super-csn.ca
+      - SECRET_KEY=${SECRET_KEY:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - LOG_LEVEL=INFO
+      - RATE_LIMIT_REQUESTS=200
+      - RATE_LIMIT_WINDOW=60
+      - MAX_CONNECTIONS_PER_IP=20
+      - CACHE_TTL=300
+      - ROOM_CLEANUP_HOURS=24
+      - TRUSTED_HOSTS=vote.super-csn.ca,localhost
+    volumes:
+      - ./logs/backend:/app/logs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      mongodb-primary:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # Frontend with production build
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+      args:
+        - REACT_APP_BACKEND_URL=https://vote.super-csn.ca
+        - REACT_APP_SENTRY_DSN=${FRONTEND_SENTRY_DSN:-}
+        - REACT_APP_VERSION=2.0.0
+        - REACT_APP_ENVIRONMENT=production
+        - BUILDKIT_INLINE_CACHE=1
+      cache_from:
+        - supervote-frontend:latest
+    image: supervote-frontend:latest
+    container_name: supervote-frontend
+    restart: unless-stopped
+    volumes:
+      - ./logs/frontend:/var/log/nginx
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # Nginx reverse proxy with advanced features
+  nginx:
+    image: nginx:1.26-alpine
+    container_name: supervote-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.production.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+      - ./nginx/cache:/var/cache/nginx
+      - ./static:/var/www/static:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+    environment:
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: supervote-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  # Grafana for monitoring dashboards
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: supervote-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: supervote-node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # Backup service
+  backup:
+    image: alpine:3.20
+    container_name: supervote-backup
+    restart: unless-stopped
+    environment:
+      - MONGO_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-supersecurepassword}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    depends_on:
+      - mongodb-primary
+    networks:
+      - app-network
+    command: >
+      sh -c "
+        apk add --no-cache mongodb-tools dcron &&
+        echo '$${BACKUP_SCHEDULE} /backup.sh >> /var/log/backup.log 2>&1' | crontab - &&
+        crond -f -l 2
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Log aggregation with Fluent Bit
+  fluent-bit:
+    image: fluent/fluent-bit:3.2.2
+    container_name: supervote-fluent-bit
+    restart: unless-stopped
+    volumes:
+      - ./logging/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logs:/var/log/supervote:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - app-network
+    depends_on:
+      - backend
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # Health check service
+  healthcheck:
+    image: curlimages/curl:8.11.1
+    container_name: supervote-healthcheck
+    restart: unless-stopped
+    command: >
+      sh -c "
+        while true; do
+          sleep 60
+          curl -f http://nginx/health || echo 'Health check failed'
+          curl -f http://backend:8001/api/health || echo 'Backend health check failed'
+        done
+      "
+    depends_on:
+      - nginx
+      - backend
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+
+# Volumes for persistent data
+volumes:
+  mongodb_primary_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mongodb_primary
+  mongodb_primary_config:
+    driver: local
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/prometheus
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/grafana
+
+# Networks
+networks:
+  app-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          ip_range: 172.20.240.0/20
