@@ -389,6 +389,8 @@ verify_installation() {
     
     echo "Node.js: $(node -v)"
     echo "npm: $(npm -v)"
+    echo "Docker: $(sudo docker --version | cut -d' ' -f3 | tr -d ',')"
+    echo "Docker Compose: $(sudo docker compose version --short)"
     echo "MongoDB: $(mongod --version | head -1 | cut -d' ' -f3)"
     echo "Git: $(git --version | cut -d' ' -f3)"
     
