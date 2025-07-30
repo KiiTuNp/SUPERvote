@@ -40,8 +40,8 @@ A professional-grade, real-time polling application designed for secure meeting 
 - **MongoDB** 4.4+
 - **Git**
 
-### For Ubuntu 20.04 VPS Production Deployment
-- **Ubuntu 20.04 LTS** VPS with root access (minimum 2GB RAM, 20GB storage)
+### For Ubuntu 22.04 VPS Production Deployment
+- **Ubuntu 22.04 LTS** VPS with root access (minimum 2GB RAM, 20GB storage)
 - **Domain name** pointing to your VPS IP (vote.super-csn.ca in this example)
 - **SSH access** to your VPS
 - **Firewall** configured to allow ports 22, 80, 443
