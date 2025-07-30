@@ -951,7 +951,7 @@ git pull origin main
 
 # For Docker deployment
 docker-compose -f docker-compose.prod.yml down
-docker-compose -f docker-compose.prod.yml up -d --build
+docker compose up -d --build
 
 # For manual deployment
 cd backend && source venv/bin/activate && pip install -r requirements.txt
