@@ -606,14 +606,17 @@ node --version  # Should be v20.19.4
 npm --version   # Should be 11.5.1 or higher
 ```
 
-#### Step 3: Setup MongoDB
+#### Step 3: Setup MongoDB 8.0
 ```bash
 # Start and enable MongoDB
-sudo systemctl start mongodb
-sudo systemctl enable mongodb
+sudo systemctl start mongod
+sudo systemctl enable mongod
 
 # Verify MongoDB is running
-sudo systemctl status mongodb
+sudo systemctl status mongod
+
+# Check MongoDB version
+mongod --version  # Should show MongoDB 8.0.12 or higher
 ```
 
 #### Step 4: Clone and Setup Application
