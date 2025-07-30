@@ -37,7 +37,7 @@ A professional-grade, real-time polling application designed for secure meeting 
 ### For Local Development
 - **Node.js** 20+ and npm/yarn
 - **Python** 3.8+
-- **MongoDB** 4.4+
+- **MongoDB** 8.0+
 - **Git**
 
 ### For Ubuntu 22.04 VPS Production Deployment
