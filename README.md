@@ -588,11 +588,18 @@ sudo systemctl start supervote.service
 # Connect to your VPS
 ssh root@your-vps-ip
 
-# Update system
+# Update the system
 sudo apt update && sudo apt upgrade -y
 
-# Install required packages
-sudo apt install -y curl wget git nginx mongodb-org python3 python3-pip python3-venv nodejs npm ufw
+# Install essential packages
+sudo apt install -y curl wget git nginx mongodb-org python3.11 python3.11-pip python3.11-venv nodejs npm ufw
+
+# Verify versions
+python3 --version    # Should be Python 3.11+
+pip3 --version       # Should be pip 22.0.2+
+node --version       # Should be v20.19.4+
+npm --version        # Should be 11.5.1+
+mongod --version     # Should be MongoDB 8.0.12+
 ```
 
 #### Step 2: Install Node.js 20
