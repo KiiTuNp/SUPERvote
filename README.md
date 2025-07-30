@@ -955,13 +955,16 @@ sudo ufw status
 #### MongoDB Connection Issues
 ```bash
 # Check MongoDB status
-sudo systemctl status mongodb
+sudo systemctl status mongod
 
 # Restart MongoDB
-sudo systemctl restart mongodb
+sudo systemctl restart mongod
 
 # Check logs
-sudo journalctl -u mongodb
+sudo journalctl -u mongod
+
+# Check MongoDB version
+mongod --version
 ```
 
 #### Nginx Configuration Issues
