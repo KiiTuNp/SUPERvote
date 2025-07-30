@@ -254,6 +254,12 @@ services:
     container_name: supervote-frontend
     hostname: web-server
     <<: *default-restart-policy
+    environment:
+      # Frontend Configuration
+      REACT_APP_BACKEND_URL: https://vote.super-csn.ca
+      REACT_APP_VERSION: ${VERSION:-2.0.0}
+      REACT_APP_ENVIRONMENT: production
+      REACT_APP_SENTRY_DSN: ${FRONTEND_SENTRY_DSN:-}
     volumes:
       - ./logs/frontend:/var/log/nginx:Z
       - frontend_cache:/var/cache/nginx:Z
