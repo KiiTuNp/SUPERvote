@@ -14,15 +14,13 @@ RUN apk add --no-cache \
     && npm install -g npm@10.8.2
 
 # Copy package files
-COPY package.json yarn.lock* package-lock.json* ./
+COPY package.json package-lock.json* ./
 
-# Install dependencies based on available lock file
-RUN if [ -f yarn.lock ]; then \
-        yarn install --frozen-lockfile --production=false; \
-    elif [ -f package-lock.json ]; then \
-        npm ci; \
+# Install dependencies (generate package-lock.json if not exists)
+RUN if [ -f package-lock.json ]; then \
+        npm ci --omit=dev; \
     else \
-        npm install; \
+        npm install --omit=dev && npm audit fix --force; \
     fi
 
 # Copy source code
