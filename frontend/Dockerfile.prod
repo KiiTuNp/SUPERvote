@@ -1,0 +1,67 @@
+# Multi-stage build for production optimization
+FROM node:20-alpine as builder
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++
+
+# Copy package files
+COPY package.json yarn.lock* ./
+
+# Install dependencies
+RUN yarn install --frozen-lockfile --production=false
+
+# Copy source code
+COPY . .
+
+# Build the application for production
+RUN yarn build
+
+# Production stage with nginx
+FROM node:20-alpine as production
+
+# Set working directory
+WORKDIR /app
+
+# Install production dependencies only
+RUN apk add --no-cache \
+    curl \
+    tini
+
+# Copy package files
+COPY package.json yarn.lock* ./
+
+# Install only production dependencies
+RUN yarn install --frozen-lockfile --production=true && \
+    yarn cache clean
+
+# Copy built application from builder stage
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/src ./src
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup && \
+    chown -R appuser:appgroup /app
+
+USER appuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Use tini as entrypoint for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the application
+CMD ["yarn", "start"]

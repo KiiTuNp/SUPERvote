@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Nginx reverse proxy for HTTPS termination
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: vote-secret-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - vote-secret-network
+
+  # MongoDB with authentication and persistence
+  mongodb:
+    image: mongo:8.0
+    container_name: vote-secret-mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=voteadmin
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=vote_secret_db
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - vote-secret-network
+    command: mongod --auth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: vote-secret-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://voteuser:${MONGO_USER_PASSWORD}@mongodb:27017/vote_secret_db?authSource=vote_secret_db
+      - DB_NAME=vote_secret_db
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=https://vote.super-csn.ca
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - vote-secret-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - /tmp:/tmp
+
+  # Frontend React service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: vote-secret-frontend
+    restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_URL=https://vote.super-csn.ca
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - vote-secret-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  nginx_cache:
+    driver: local
+
+networks:
+  vote-secret-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
