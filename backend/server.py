@@ -185,20 +185,35 @@ async def get_meeting_organizer_view(meeting_id: str):
 # Participant endpoints
 @api_router.post("/participants/join")
 async def join_meeting(join_data: ParticipantJoin):
+    # Validation des champs obligatoires
+    if not join_data.name or not join_data.name.strip():
+        raise HTTPException(status_code=400, detail="Le nom du participant est requis")
+    if not join_data.meeting_code or not join_data.meeting_code.strip():
+        raise HTTPException(status_code=400, detail="Le code de réunion est requis")
+    
+    # Limitation de la longueur et format
+    if len(join_data.name.strip()) > 100:
+        raise HTTPException(status_code=400, detail="Le nom ne peut pas dépasser 100 caractères")
+    if len(join_data.meeting_code.strip()) != 8:
+        raise HTTPException(status_code=400, detail="Le code de réunion doit faire 8 caractères")
+    
+    clean_name = join_data.name.strip()
+    clean_code = join_data.meeting_code.strip().upper()
+    
     # Check if meeting exists and is active
-    meeting = await db.meetings.find_one({"meeting_code": join_data.meeting_code, "status": "active"})
+    meeting = await db.meetings.find_one({"meeting_code": clean_code, "status": "active"})
     if not meeting:
-        raise HTTPException(status_code=404, detail="Meeting not found or not active")
+        raise HTTPException(status_code=404, detail="Réunion non trouvée ou inactive")
     
     # Check if participant name already exists in this meeting
     existing = await db.participants.find_one({
-        "name": join_data.name, 
+        "name": clean_name, 
         "meeting_id": meeting["id"]
     })
     if existing:
-        raise HTTPException(status_code=400, detail="Name already taken in this meeting")
+        raise HTTPException(status_code=400, detail="Ce nom est déjà pris dans cette réunion")
     
-    participant = Participant(name=join_data.name, meeting_id=meeting["id"])
+    participant = Participant(name=clean_name, meeting_id=meeting["id"])
     await db.participants.insert_one(participant.dict())
     
     # Notify organizer via WebSocket
