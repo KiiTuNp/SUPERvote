@@ -40,7 +40,7 @@
 
 **Date:** 2025-01-27  
 **Tester:** Testing Agent  
-**Backend URL:** https://0d9cde8c-733a-4be6-8f0b-33dc9641dcb8.preview.emergentagent.com/api
+**Backend URL:** https://acca2cb3-6c6a-4574-853d-844f59bfc1cb.preview.emergentagent.com/api
 
 ### ✅ PASSED TESTS (20/21)
 
