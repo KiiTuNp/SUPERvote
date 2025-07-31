@@ -5,8 +5,6 @@ Tests load handling, concurrent operations, and edge cases
 """
 
 import requests
-import asyncio
-import aiohttp
 import time
 import json
 from concurrent.futures import ThreadPoolExecutor
