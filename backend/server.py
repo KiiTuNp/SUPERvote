@@ -653,14 +653,35 @@ async def websocket_endpoint(websocket: WebSocket, meeting_id: str):
     except WebSocketDisconnect:
         manager.disconnect(websocket, meeting_id)
 
+# Health check endpoint for production
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for load balancers and monitoring"""
+    try:
+        # Test database connection
+        await client.admin.command('ping')
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "services": {
+                "database": "connected",
+                "api": "running"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(status_code=503, detail="Service unhealthy")
+
 # Include the router in the main app
 app.include_router(api_router)
 
+# CORS configuration - restrict in production
+cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=cors_origins,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
