@@ -345,34 +345,42 @@ async def get_meeting_polls(meeting_id: str):
 # Voting endpoints
 @api_router.post("/votes")
 async def submit_vote(vote_data: VoteCreate):
-    # Verify poll exists and is active
-    poll = await db.polls.find_one({"id": vote_data.poll_id})
-    if not poll:
-        raise HTTPException(status_code=404, detail="Poll not found")
+    # Get or create lock for this poll
+    async with lock_manager:
+        if vote_data.poll_id not in vote_locks:
+            vote_locks[vote_data.poll_id] = asyncio.Lock()
+        poll_lock = vote_locks[vote_data.poll_id]
     
-    if poll["status"] != PollStatus.ACTIVE:
-        raise HTTPException(status_code=400, detail="Poll is not active")
-    
-    # Check if option exists
-    option_exists = any(opt["id"] == vote_data.option_id for opt in poll["options"])
-    if not option_exists:
-        raise HTTPException(status_code=400, detail="Invalid option")
-    
-    # Create anonymous vote
-    vote = Vote(poll_id=vote_data.poll_id, option_id=vote_data.option_id)
-    await db.votes.insert_one(vote.dict())
-    
-    # Update poll results
-    await update_poll_results(vote_data.poll_id)
-    
-    # Notify real-time updates
-    updated_poll = await db.polls.find_one({"id": vote_data.poll_id})
-    await manager.send_to_meeting({
-        "type": "vote_submitted",
-        "poll": Poll(**updated_poll).dict()
-    }, poll["meeting_id"])
-    
-    return {"status": "vote_submitted"}
+    # Use lock to prevent concurrent vote updates
+    async with poll_lock:
+        # Verify poll exists and is active
+        poll = await db.polls.find_one({"id": vote_data.poll_id})
+        if not poll:
+            raise HTTPException(status_code=404, detail="Sondage non trouvé")
+        
+        if poll["status"] != PollStatus.ACTIVE:
+            raise HTTPException(status_code=400, detail="Le sondage n'est pas actif")
+        
+        # Check if option exists
+        option_exists = any(opt["id"] == vote_data.option_id for opt in poll["options"])
+        if not option_exists:
+            raise HTTPException(status_code=400, detail="Option invalide")
+        
+        # Create anonymous vote
+        vote = Vote(poll_id=vote_data.poll_id, option_id=vote_data.option_id)
+        await db.votes.insert_one(vote.dict())
+        
+        # Update poll results immediately in the same transaction
+        await update_poll_results(vote_data.poll_id)
+        
+        # Notify real-time updates
+        updated_poll = await db.polls.find_one({"id": vote_data.poll_id})
+        await manager.send_to_meeting({
+            "type": "vote_submitted",
+            "poll": Poll(**updated_poll).dict()
+        }, poll["meeting_id"])
+        
+        return {"status": "vote_submitted", "message": "Vote enregistré avec succès"}
 
 async def update_poll_results(poll_id: str):
     # Get all votes for this poll
