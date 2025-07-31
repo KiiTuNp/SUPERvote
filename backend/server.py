@@ -138,7 +138,22 @@ class VoteCreate(BaseModel):
 # Meeting endpoints
 @api_router.post("/meetings", response_model=Meeting)
 async def create_meeting(meeting_data: MeetingCreate):
-    meeting = Meeting(**meeting_data.dict())
+    # Validation des champs obligatoires
+    if not meeting_data.title or not meeting_data.title.strip():
+        raise HTTPException(status_code=400, detail="Le titre de la réunion est requis")
+    if not meeting_data.organizer_name or not meeting_data.organizer_name.strip():
+        raise HTTPException(status_code=400, detail="Le nom de l'organisateur est requis")
+    
+    # Limitation de la longueur des champs
+    if len(meeting_data.title.strip()) > 200:
+        raise HTTPException(status_code=400, detail="Le titre de la réunion ne peut pas dépasser 200 caractères")
+    if len(meeting_data.organizer_name.strip()) > 100:
+        raise HTTPException(status_code=400, detail="Le nom de l'organisateur ne peut pas dépasser 100 caractères")
+    
+    meeting = Meeting(
+        title=meeting_data.title.strip(),
+        organizer_name=meeting_data.organizer_name.strip()
+    )
     await db.meetings.insert_one(meeting.dict())
     return meeting
 
