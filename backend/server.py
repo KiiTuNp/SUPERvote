@@ -255,15 +255,38 @@ async def get_participant_status(participant_id: str):
 # Poll endpoints
 @api_router.post("/meetings/{meeting_id}/polls", response_model=Poll)
 async def create_poll(meeting_id: str, poll_data: PollCreate):
+    # Validation des champs obligatoires
+    if not poll_data.question or not poll_data.question.strip():
+        raise HTTPException(status_code=400, detail="La question du sondage est requise")
+    if not poll_data.options or len(poll_data.options) < 2:
+        raise HTTPException(status_code=400, detail="Au moins 2 options sont requises")
+    
+    # Validation des options
+    clean_options = []
+    for i, option in enumerate(poll_data.options):
+        if not option or not option.strip():
+            raise HTTPException(status_code=400, detail=f"L'option {i+1} ne peut pas être vide")
+        if len(option.strip()) > 200:
+            raise HTTPException(status_code=400, detail=f"L'option {i+1} ne peut pas dépasser 200 caractères")
+        clean_options.append(option.strip())
+    
+    # Limitation du nombre d'options
+    if len(clean_options) > 20:
+        raise HTTPException(status_code=400, detail="Maximum 20 options par sondage")
+    
+    # Vérifier les doublons
+    if len(set(clean_options)) != len(clean_options):
+        raise HTTPException(status_code=400, detail="Les options doivent être uniques")
+    
     # Verify meeting exists
     meeting = await db.meetings.find_one({"id": meeting_id})
     if not meeting:
-        raise HTTPException(status_code=404, detail="Meeting not found")
+        raise HTTPException(status_code=404, detail="Réunion non trouvée")
     
-    options = [PollOption(text=opt) for opt in poll_data.options]
+    options = [PollOption(text=opt) for opt in clean_options]
     poll = Poll(
         meeting_id=meeting_id,
-        question=poll_data.question,
+        question=poll_data.question.strip(),
         options=options,
         timer_duration=poll_data.timer_duration,
         show_results_real_time=poll_data.show_results_real_time
