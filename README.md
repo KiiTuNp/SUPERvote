@@ -88,7 +88,7 @@ mongod --version
 #### Yarn (Gestionnaire de paquets Node.js)
 ```bash
 # Installer Yarn globalement
-npm install -g yarn
+sudo npm install -g yarn
 
 # Vérifier la version
 yarn --version
@@ -98,8 +98,8 @@ yarn --version
 
 ### 1. Cloner le projet
 ```bash
-git clone <votre-repo>
-cd vote-secret
+git clone https://github.com/KiiTuNp/SUPERvote.git
+cd SUPERvote
 ```
 
 ### 2. Configuration Backend (Python/FastAPI)
@@ -108,9 +108,6 @@ cd vote-secret
 ```bash
 cd backend
 python3.11 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# ou
-venv\Scripts\activate  # Windows
 ```
 
 #### Installer les dépendances Python
@@ -137,7 +134,7 @@ yarn install
 #### Configuration de l'environnement
 ```bash
 # Le fichier .env contient déjà :
-# REACT_APP_BACKEND_URL=<votre-url-backend>
+# REACT_APP_BACKEND_URL=http://127.0.0.1:8001
 # WDS_SOCKET_PORT=443
 ```
 
