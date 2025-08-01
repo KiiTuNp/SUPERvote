@@ -135,7 +135,7 @@ docker-compose --version
 ```bash
 # Clone the project
 git clone <your-repository-url>
-cd vote-secret
+cd supervote
 
 # Verify project structure
 ls -la
@@ -256,20 +256,20 @@ sudo usermod -aG sudo voteapp
 #### 2. Application Deployment
 ```bash
 # Clone to production location
-sudo mkdir -p /opt/vote-secret
-sudo chown voteapp:voteapp /opt/vote-secret
-cd /opt/vote-secret
+sudo mkdir -p /opt/supervote
+sudo chown voteapp:voteapp /opt/supervote
+cd /opt/supervote
 
 # Clone repository
 git clone <your-repository-url> .
 
 # Set proper permissions
-sudo chown -R voteapp:voteapp /opt/vote-secret
+sudo chown -R voteapp:voteapp /opt/supervote
 ```
 
 #### 3. Backend Production Setup
 ```bash
-cd /opt/vote-secret/backend
+cd /opt/supervote/backend
 
 # Create production virtual environment
 python3.11 -m venv venv
@@ -290,7 +290,7 @@ DB_NAME=vote_secret_production
 
 #### 4. Frontend Production Build
 ```bash
-cd /opt/vote-secret/frontend
+cd /opt/supervote/frontend
 
 # Install dependencies
 yarn install
@@ -313,7 +313,7 @@ yarn build
 
 #### 5. Nginx Configuration
 ```bash
-sudo nano /etc/nginx/sites-available/vote-secret
+sudo nano /etc/nginx/sites-available/supervote
 ```
 
 ```nginx
@@ -343,7 +343,7 @@ server {
 
     # Frontend (React build)
     location / {
-        root /opt/vote-secret/frontend/build;
+        root /opt/supervote/frontend/build;
         try_files $uri $uri/ /index.html;
         
         # Cache static assets
@@ -373,7 +373,7 @@ server {
 
 Enable the site:
 ```bash
-sudo ln -s /etc/nginx/sites-available/vote-secret /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/supervote /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -391,7 +391,7 @@ sudo crontab -e
 #### 7. Process Management with Systemd
 Create backend service:
 ```bash
-sudo nano /etc/systemd/system/vote-secret-backend.service
+sudo nano /etc/systemd/system/supervote-backend.service
 ```
 
 ```ini
@@ -402,9 +402,9 @@ After=network.target
 [Service]
 Type=simple
 User=voteapp
-WorkingDirectory=/opt/vote-secret/backend
-Environment=PATH=/opt/vote-secret/backend/venv/bin
-ExecStart=/opt/vote-secret/backend/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001
+WorkingDirectory=/opt/supervote/backend
+Environment=PATH=/opt/supervote/backend/venv/bin
+ExecStart=/opt/supervote/backend/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001
 Restart=always
 RestartSec=3
 
@@ -415,9 +415,9 @@ WantedBy=multi-user.target
 Enable and start:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable vote-secret-backend
-sudo systemctl start vote-secret-backend
-sudo systemctl status vote-secret-backend
+sudo systemctl enable supervote-backend
+sudo systemctl start supervote-backend
+sudo systemctl status supervote-backend
 ```
 
 ### Option 2: Docker Production Deployment (Recommended)
@@ -540,15 +540,15 @@ docker-compose -f docker-compose.prod.yml up -d
 ```bash
 # Container management
 docker ps                                      # List running containers
-docker logs vote-secret-backend               # View specific container logs
-docker exec -it vote-secret-backend bash      # Access container shell
+docker logs supervote-backend               # View specific container logs
+docker exec -it supervote-backend bash      # Access container shell
 
 # Image management
 docker images                                  # List images
 docker system prune -a                        # Clean up unused images/containers
 
 # Database access
-docker exec -it vote-secret-mongodb mongosh vote_secret_db -u voteuser -p
+docker exec -it supervote-mongodb mongosh vote_secret_db -u voteuser -p
 ```
 
 ## 🔐 Security & SSL
@@ -608,7 +608,7 @@ curl https://your-domain.com/api/health
 docker-compose -f docker-compose.prod.yml ps
 
 # Service status (Systemd)
-sudo systemctl status vote-secret-backend
+sudo systemctl status supervote-backend
 sudo systemctl status nginx
 sudo systemctl status mongod
 ```
@@ -621,7 +621,7 @@ docker-compose -f docker-compose.prod.yml logs frontend --tail=100
 docker-compose -f docker-compose.prod.yml logs nginx --tail=100
 
 # System logs
-sudo journalctl -u vote-secret-backend -f
+sudo journalctl -u supervote-backend -f
 sudo journalctl -u nginx -f
 tail -f /var/log/nginx/access.log
 tail -f /var/log/nginx/error.log
@@ -630,7 +630,7 @@ tail -f /var/log/nginx/error.log
 ### Backup & Recovery
 ```bash
 # Database backup (Docker)
-docker exec vote-secret-mongodb mongodump --uri="mongodb://voteuser:password@localhost:27017/vote_secret_db" --out=/backup
+docker exec supervote-mongodb mongodump --uri="mongodb://voteuser:password@localhost:27017/vote_secret_db" --out=/backup
 
 # Database backup (Manual)
 mongodump --uri="mongodb://localhost:27017/vote_secret_db" --out=./backup-$(date +%Y%m%d)
@@ -697,11 +697,11 @@ sudo systemctl reload nginx
 ```bash
 # Check service status
 docker-compose -f docker-compose.prod.yml ps
-sudo systemctl status vote-secret-backend
+sudo systemctl status supervote-backend
 
 # Check logs for errors
 docker-compose -f docker-compose.prod.yml logs backend
-sudo journalctl -u vote-secret-backend --no-pager
+sudo journalctl -u supervote-backend --no-pager
 ```
 
 **Common causes**:
@@ -717,7 +717,7 @@ sudo netstat -tlnp | grep :8001
 
 # Restart services
 docker-compose -f docker-compose.prod.yml restart
-sudo systemctl restart vote-secret-backend
+sudo systemctl restart supervote-backend
 
 # Check environment variables
 cat .env.prod.local
@@ -728,7 +728,7 @@ cat .env.prod.local
 **Symptoms**: Database connection errors, data not persisting
 ```bash
 # Test MongoDB connection
-docker exec -it vote-secret-mongodb mongosh --eval "db.adminCommand('ping')"
+docker exec -it supervote-mongodb mongosh --eval "db.adminCommand('ping')"
 mongo --eval "db.adminCommand('ping')"
 
 # Check MongoDB status
@@ -771,7 +771,7 @@ docker-compose -f docker-compose.prod.yml restart nginx
 
 # Check nginx configuration
 nginx -t
-docker exec vote-secret-nginx nginx -t
+docker exec supervote-nginx nginx -t
 ```
 
 #### 4. Performance Issues
@@ -842,7 +842,7 @@ sudo netstat -tlnp | grep -E ":(80|443|8001|27017|3000)"
 
 # Check disk space
 df -h
-du -sh /opt/vote-secret
+du -sh /opt/supervote
 
 # Check memory usage
 free -h
@@ -867,10 +867,10 @@ tail -f /var/log/nginx/access.log | grep -v "GET /health"
 ```bash
 # 1. Stop all services
 docker-compose -f docker-compose.prod.yml down
-sudo systemctl stop vote-secret-backend nginx
+sudo systemctl stop supervote-backend nginx
 
 # 2. Backup current state
-tar -czf vote-secret-backup-$(date +%Y%m%d).tar.gz /opt/vote-secret
+tar -czf supervote-backup-$(date +%Y%m%d).tar.gz /opt/supervote
 
 # 3. Fresh deployment
 git pull origin main
@@ -996,11 +996,11 @@ sudo certbot renew && sudo systemctl reload nginx
 ```bash
 # Stop everything
 docker-compose -f docker-compose.prod.yml down
-sudo systemctl stop vote-secret-backend nginx
+sudo systemctl stop supervote-backend nginx
 
 # Quick restart
 docker-compose -f docker-compose.prod.yml restart
-sudo systemctl restart vote-secret-backend nginx
+sudo systemctl restart supervote-backend nginx
 
 # Check status
 docker-compose -f docker-compose.prod.yml ps
