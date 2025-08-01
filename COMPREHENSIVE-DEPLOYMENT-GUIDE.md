@@ -249,22 +249,22 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y nginx certbot python3-certbot-nginx
 
 # Create application user
-sudo useradd -m -s /bin/bash voteapp
-sudo usermod -aG sudo voteapp
+sudo useradd -m -s /bin/bash ubuntu
+sudo usermod -aG sudo ubuntu
 ```
 
 #### 2. Application Deployment
 ```bash
 # Clone to production location
 sudo mkdir -p /opt/supervote
-sudo chown voteapp:voteapp /opt/supervote
+sudo chown ubuntu:ubuntu /opt/supervote
 cd /opt/supervote
 
 # Clone repository
 git clone <your-repository-url> .
 
 # Set proper permissions
-sudo chown -R voteapp:voteapp /opt/supervote
+sudo chown -R ubuntu:ubuntu /opt/supervote
 ```
 
 #### 3. Backend Production Setup
@@ -401,7 +401,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=voteapp
+User=ubuntu
 WorkingDirectory=/opt/supervote/backend
 Environment=PATH=/opt/supervote/backend/venv/bin
 ExecStart=/opt/supervote/backend/venv/bin/uvicorn server:app --host 127.0.0.1 --port 8001
