@@ -134,7 +134,7 @@ docker-compose --version
 ### 1. Clone the Repository
 ```bash
 # Clone the project
-git clone <your-repository-url>
+git clone https://github.com/KiiTuNp/SUPERvote.git
 cd supervote
 
 # Verify project structure
@@ -261,7 +261,7 @@ sudo chown ubuntu:ubuntu /opt/supervote
 cd /opt/supervote
 
 # Clone repository
-git clone <your-repository-url> .
+git clone https://github.com/KiiTuNp/SUPERvote.git .
 
 # Set proper permissions
 sudo chown -R ubuntu:ubuntu /opt/supervote
@@ -301,7 +301,7 @@ cp .env .env.production
 
 Edit `.env.production`:
 ```env
-REACT_APP_BACKEND_URL=https://your-domain.com/api
+REACT_APP_BACKEND_URL=https://vote.super-csn.ca/api
 ```
 
 ```bash
@@ -319,7 +319,7 @@ sudo nano /etc/nginx/sites-available/supervote
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name vote.super-csn.ca;
 
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
@@ -327,7 +327,7 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name your-domain.com;
+    server_name vote.super-csn.ca;
 
     # SSL Configuration (will be added by certbot)
     
@@ -381,7 +381,7 @@ sudo systemctl reload nginx
 #### 6. SSL Certificate Setup
 ```bash
 # Get Let's Encrypt certificate
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d vote.super-csn.ca
 
 # Set up auto-renewal
 sudo crontab -e
@@ -437,7 +437,7 @@ openssl rand -base64 32  # Use for JWT_SECRET
 Edit `.env.prod.local`:
 ```env
 # Domain Configuration
-DOMAIN=your-domain.com
+DOMAIN=vote.super-csn.ca
 
 # MongoDB Configuration
 MONGO_ROOT_PASSWORD=your_secure_root_password_here
@@ -460,8 +460,8 @@ PYTHON_ENV=production
 mkdir -p nginx/ssl
 
 # Copy your certificates
-cp your-certificate.crt nginx/ssl/your-domain.com.crt
-cp your-private-key.key nginx/ssl/your-domain.com.key
+cp your-certificate.crt nginx/ssl/vote.super-csn.ca.crt
+cp your-private-key.key nginx/ssl/vote.super-csn.ca.key
 
 # Set permissions
 chmod 600 nginx/ssl/*
@@ -497,8 +497,8 @@ docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml logs -f
 
 # Test application
-curl -I https://your-domain.com
-curl https://your-domain.com/api/health
+curl -I https://vote.super-csn.ca
+curl https://vote.super-csn.ca/api/health
 ```
 
 ## 🐳 Docker Deployment
@@ -558,7 +558,7 @@ docker exec -it supervote-mongodb mongosh vote_secret_db -u voteuser -p
 #### Let's Encrypt Automation
 ```bash
 # Initial certificate generation
-sudo certbot certonly --standalone -d your-domain.com
+sudo certbot certonly --standalone -d vote.super-csn.ca
 
 # For Docker deployment
 ./scripts/setup-ssl.sh
@@ -573,11 +573,11 @@ echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
 #### SSL Certificate Verification
 ```bash
 # Check certificate validity
-openssl x509 -in nginx/ssl/your-domain.com.crt -text -noout
+openssl x509 -in nginx/ssl/vote.super-csn.ca.crt -text -noout
 
 # Test SSL configuration
-curl -I https://your-domain.com
-openssl s_client -connect your-domain.com:443 -servername your-domain.com
+curl -I https://vote.super-csn.ca
+openssl s_client -connect vote.super-csn.ca:443 -servername vote.super-csn.ca
 ```
 
 ### Security Best Practices Implemented
@@ -601,8 +601,8 @@ openssl s_client -connect your-domain.com:443 -servername your-domain.com
 ### Health Checks
 ```bash
 # Application health
-curl https://your-domain.com/health
-curl https://your-domain.com/api/health
+curl https://vote.super-csn.ca/health
+curl https://vote.super-csn.ca/api/health
 
 # Service status (Docker)
 docker-compose -f docker-compose.prod.yml ps
@@ -754,10 +754,10 @@ telnet localhost 27017
 **Symptoms**: SSL warnings, certificate errors
 ```bash
 # Check certificate validity
-openssl x509 -in nginx/ssl/your-domain.com.crt -text -noout | grep -A2 "Validity"
+openssl x509 -in nginx/ssl/vote.super-csn.ca.crt -text -noout | grep -A2 "Validity"
 
 # Test SSL configuration
-curl -I https://your-domain.com
+curl -I https://vote.super-csn.ca
 ```
 
 **Solutions**:
@@ -784,7 +784,7 @@ df -h
 free -m
 
 # Check application performance
-curl -w "@curl-format.txt" -o /dev/null -s https://your-domain.com/api/health
+curl -w "@curl-format.txt" -o /dev/null -s https://vote.super-csn.ca/api/health
 ```
 
 **Solutions**:
@@ -805,7 +805,7 @@ mongo --eval "db.runCommand({serverStatus: 1}).connections"
 ```bash
 # Check nginx configuration
 nginx -t
-curl -I https://your-domain.com
+curl -I https://vote.super-csn.ca
 
 # Check build files
 ls -la frontend/build/
@@ -851,8 +851,8 @@ free -h
 #### Application Debug
 ```bash
 # Test API endpoints
-curl -X GET https://your-domain.com/api/health
-curl -X POST https://your-domain.com/api/meeting -H "Content-Type: application/json" -d '{"name":"Test"}'
+curl -X GET https://vote.super-csn.ca/api/health
+curl -X POST https://vote.super-csn.ca/api/meeting -H "Content-Type: application/json" -d '{"name":"Test"}'
 
 # Check database records
 mongo vote_secret_db --eval "db.meetings.find().pretty()"
@@ -1004,7 +1004,7 @@ sudo systemctl restart supervote-backend nginx
 
 # Check status
 docker-compose -f docker-compose.prod.yml ps
-curl -I https://your-domain.com/health
+curl -I https://vote.super-csn.ca/health
 ```
 
 ---
@@ -1014,7 +1014,7 @@ curl -I https://your-domain.com/health
 Your Vote Secret application should now be running successfully! 
 
 - **Development**: http://localhost:3000
-- **Production**: https://your-domain.com
+- **Production**: https://vote.super-csn.ca
 
 For additional support or questions, refer to the detailed sections above or check the application logs.
 
